@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Extensions;
+using FluentAssertions;
 using ORM.Contracts;
 using ORM.Db;
 
@@ -78,6 +79,8 @@ namespace ORM
 
         public void SubmitChanges()
         {
+            // зачем всё в один резалт класть? он же вроде только для одной команды?
+            //+команды заканчиваются с ;
             var result = "";
             foreach (var book in cashForPaste)
             {
@@ -180,7 +183,7 @@ namespace Extensions
         public static string BookToString(this Book book)
         {
             var result = "";
-            foreach (var field in book.GetType().GetFields())
+            foreach (var field in book.GetType().Properties())
             {
                 switch (field.Name)
                 {
