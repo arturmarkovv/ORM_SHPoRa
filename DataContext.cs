@@ -13,8 +13,6 @@ namespace ORM
         private readonly IDbEngine dbEngine;
         private Dictionary<string, Book> cashForUpdate = new Dictionary<string, Book>();
         private Dictionary<string, Book> cashForPaste = new Dictionary<string, Book>();
-        //private List<Book> cashForUpdateList = new List<Book>();
-        //private List<Book> cashForPasteList = new List<Book>();
 
         public DataContext(IDbEngine dbEngine)
         {
@@ -23,40 +21,31 @@ namespace ORM
 
         public Book Find(string id)
         {
-            if (id.Contains(","))
-            {
-                throw new Exception("Write only one Id");
-            }
+            if (cashForUpdate.ContainsKey(id)) return cashForUpdate[id];
             var resString = dbEngine.Execute($"get Id={id};");
             if (resString == ";")
             {
                 return null;
             }
-            else
-            {
-                var resBook = ParseStringToBook(resString);
+            var resBook = ParseStringToBook(resString);
+            cashForUpdate[id] = resBook;
 
-                if (!cashForUpdate.ContainsKey(id))
-                {
-                    cashForUpdate[id] = resBook;
-                }
-
-                return cashForUpdate[id];
-            }
+            return cashForUpdate[id];
+            
 
         }
 
         public Book Read(string id)
         {
-            var resString = dbEngine.Execute($"get Id={id};");
-            if (resString == ";")
-            {
-                throw new Exception();
-            }
-
-            var resBook = ParseStringToBook(resString);
             if (!cashForUpdate.ContainsKey(id))
             {
+                var resString = dbEngine.Execute($"get Id={id};");
+                if (resString == ";")
+                {
+                    throw new Exception();
+                }
+
+                var resBook = ParseStringToBook(resString);
                 cashForUpdate[id] = resBook;
                 
             }
@@ -79,8 +68,6 @@ namespace ORM
 
         public void SubmitChanges()
         {
-            // зачем всё в один резалт класть? он же вроде только для одной команды?
-            //+команды заканчиваются с ;
             var result = "";
             foreach (var book in cashForPaste)
             {
@@ -95,15 +82,6 @@ namespace ORM
             if (dbEngine.Execute(result).Contains("err"))
             {
                 throw new Exception(dbEngine.Execute(result)+" with out line "+result);
-            }
-
-            try
-            {
-                cashForUpdate.Clear();
-            }
-            catch
-            {
-                
             }
 
             foreach (var book in cashForPaste)
@@ -180,7 +158,7 @@ namespace Extensions
 
     public static class BookParsersExtentions
     {
-        public static string BookToString(this Book book)
+        public static string ToStringReqest(this Book book)
         {
             var result = "";
             foreach (var field in book.GetType().Properties())

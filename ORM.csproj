@@ -62,7 +62,7 @@
   <ItemGroup>
     <Compile Include="Contracts\Book.cs" />
     <Compile Include="Contracts\DbEntity.cs" />
-    <Compile Include="Tests\BookExtentionsTests.cs" />
+    <Compile Include="Tests\BookExtensionsTests.cs" />
     <Compile Include="Tests\DataContextTests.cs" />
     <Compile Include="Tests\DbEngineTests.cs" />
     <Compile Include="DataContext.cs" />
