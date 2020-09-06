@@ -1,0 +1,8 @@
+D:\Работа\ШПОРА2020\ORM.csproj\bin\Debug\ORM.exe
+D:\Работа\ШПОРА2020\ORM.csproj\bin\Debug\ORM.pdb
+D:\Работа\ШПОРА2020\ORM.csproj\bin\Debug\nunit.framework.dll
+D:\Работа\ШПОРА2020\ORM.csproj\bin\Debug\ORM.DbEngine.dll
+D:\Работа\ШПОРА2020\ORM.csproj\obj\Debug\ORM.csprojAssemblyReference.cache
+D:\Работа\ШПОРА2020\ORM.csproj\obj\Debug\ORM.csproj.CopyComplete
+D:\Работа\ШПОРА2020\ORM.csproj\obj\Debug\ORM.exe
+D:\Работа\ШПОРА2020\ORM.csproj\obj\Debug\ORM.pdb
