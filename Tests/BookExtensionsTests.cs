@@ -47,7 +47,7 @@ namespace ORM.Tests
                 Skill = "S",
                 Weight = decimal.One
             };
-            var bookStr = book.ToStringReqest();
+            var bookStr = book.ToStringRequest();
         }
     }
 }

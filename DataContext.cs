@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using Extensions;
-using FluentAssertions;
 using ORM.Contracts;
 using ORM.Db;
 
@@ -10,46 +8,43 @@ namespace ORM
 {
     public class DataContext : IDataContext
     {
-        private readonly IDbEngine dbEngine;
-        private Dictionary<string, Book> cashForUpdate = new Dictionary<string, Book>();
-        private Dictionary<string, Book> cashForPaste = new Dictionary<string, Book>();
+        private readonly IDbEngine _dbEngine;
+        private Dictionary<string, Book> _cashForUpdate = new Dictionary<string, Book>();
+        private Dictionary<string, Book> _cashForPaste = new Dictionary<string, Book>();
 
         public DataContext(IDbEngine dbEngine)
         {
-            this.dbEngine = dbEngine;
+            this._dbEngine = dbEngine;
         }
 
         public Book Find(string id)
         {
-            if (cashForUpdate.ContainsKey(id)) return cashForUpdate[id];
-            var resString = dbEngine.Execute($"get Id={id};");
+            if (_cashForUpdate.ContainsKey(id)) return _cashForUpdate[id];
+            var resString = _dbEngine.Execute($"get Id={id};");
             if (resString == ";")
             {
                 return null;
             }
             var resBook = ParseStringToBook(resString);
-            cashForUpdate[id] = resBook;
+            _cashForUpdate[id] = resBook;
 
-            return cashForUpdate[id];
+            return _cashForUpdate[id];
             
 
         }
 
         public Book Read(string id)
         {
-            if (!cashForUpdate.ContainsKey(id))
+            if (_cashForUpdate.ContainsKey(id)) return _cashForUpdate[id];
+            var resString = _dbEngine.Execute($"get Id={id};");
+            if (resString == ";")
             {
-                var resString = dbEngine.Execute($"get Id={id};");
-                if (resString == ";")
-                {
-                    throw new Exception();
-                }
-
-                var resBook = ParseStringToBook(resString);
-                cashForUpdate[id] = resBook;
-                
+                throw new Exception("Doesn't exist");
             }
-            return cashForUpdate[id];
+
+            var resBook = ParseStringToBook(resString);
+            _cashForUpdate[id] = resBook;
+            return _cashForUpdate[id];
             
         }
 
@@ -57,11 +52,11 @@ namespace ORM
         {
             if (entity == null)
             {
-                throw new Exception();
+                throw new Exception("Empty request");
             }
-            if (!cashForPaste.ContainsKey(entity.Id))
+            if (!_cashForPaste.ContainsKey(entity.Id))
             {
-                cashForPaste[entity.Id] = entity;
+                _cashForPaste[entity.Id] = entity;
             }
             
         }
@@ -69,46 +64,46 @@ namespace ORM
         public void SubmitChanges()
         {
             var result = "";
-            foreach (var book in cashForPaste)
+            foreach (var book in _cashForPaste)
             {
-                var strBook = ParseBookToString(book.Value);
+                var strBook = book.Value.ToStringRequest();
                 result += "add " + strBook;
             }
-            foreach (var book in cashForUpdate)
+            foreach (var book in _cashForUpdate)
             {
-                var strBook = ParseBookToString(book.Value);
+                var strBook = book.Value.ToStringRequest();
                 result += "upd " + strBook;
             }
-            if (dbEngine.Execute(result).Contains("err"))
+            if (_dbEngine.Execute(result).Contains("err"))
             {
-                throw new Exception(dbEngine.Execute(result)+" with out line "+result);
+                throw new Exception(_dbEngine.Execute(result)+" with request "+result);
             }
 
-            foreach (var book in cashForPaste)
+            foreach (var book in _cashForPaste)
             {
-                cashForUpdate[book.Key] = book.Value;
+                _cashForUpdate[book.Key] = book.Value;
             }
-            cashForPaste.Clear();
+            _cashForPaste.Clear();
         }
 
-        public Book ParseStringToBook(string input)
+        private Book ParseStringToBook(string input)
         {
-            Book newBook = new Book();
+            var newBook = new Book();
             input = input.Replace(";", "");
-            string[] parsedString = input.Split(',');
-            bool alreadyExist = false;
+            var parsedString = input.Split(',');
+            var idAlreadyExist = false;
             foreach (var field in parsedString)
             {
-                string[] subFields = field.Split('=');
+                var subFields = field.Split('=');
                 switch (subFields[0])
                 {
                     case "Id":
-                        if (alreadyExist)
+                        if (idAlreadyExist)
                         {
                             throw new Exception();
                         }
                         newBook.Id = subFields[1];
-                        alreadyExist = true;
+                        idAlreadyExist = true;
                         break;
                     case "Title":
                         newBook.Title = subFields[1];
@@ -120,7 +115,7 @@ namespace ORM
                         }
                         catch
                         {
-                            throw new Exception();
+                            throw new Exception("Invalid Price value");
                         }
                         break;
                     case "Weight":
@@ -130,7 +125,7 @@ namespace ORM
                         }
                         catch
                         {
-                            throw new Exception();
+                            throw new Exception("Invalid Weight value");
                         }
                         break;
                     case "Author":
@@ -143,12 +138,6 @@ namespace ORM
             }
             return newBook;
         }
-
-        public string ParseBookToString(Book book)
-        {
-            return $"Id={book.Id},Title={book.Title},Author={book.Author},Price={book.Price}," +
-                      $"Weight={book.Weight},Skill={book.Skill};";
-        }
     }
 }
 
@@ -156,12 +145,12 @@ namespace Extensions
 {
     using ORM.Contracts;
 
-    public static class BookParsersExtentions
+    public static class BookParsersExtensions
     {
-        public static string ToStringReqest(this Book book)
+        public static string ToStringRequest(this Book book)
         {
             var result = "";
-            foreach (var field in book.GetType().Properties())
+            foreach (var field in book.GetType().GetProperties())
             {
                 switch (field.Name)
                 {
@@ -173,12 +162,12 @@ namespace Extensions
                         break;
                 }
             }
-            if (result!="")
-            {
-                result = result.Remove(result.Length);
-            }
 
-            return result;
+            if (result != "")
+            {
+                result = result.TrimEnd(',');
+            }
+            return result+";";
         }
     }
 }
