@@ -6,3 +6,10 @@ D:\Работа\ШПОРА2020\ORM.csproj\obj\Debug\ORM.csprojAssemblyReference.
 D:\Работа\ШПОРА2020\ORM.csproj\obj\Debug\ORM.csproj.CopyComplete
 D:\Работа\ШПОРА2020\ORM.csproj\obj\Debug\ORM.exe
 D:\Работа\ШПОРА2020\ORM.csproj\obj\Debug\ORM.pdb
+D:\Работа\ШПОРА2020\ORM.csproj\bin\Debug\FluentAssertions.dll
+D:\Работа\ШПОРА2020\ORM.csproj\bin\Debug\System.Runtime.CompilerServices.Unsafe.dll
+D:\Работа\ШПОРА2020\ORM.csproj\bin\Debug\System.Threading.Tasks.Extensions.dll
+D:\Работа\ШПОРА2020\ORM.csproj\bin\Debug\FluentAssertions.pdb
+D:\Работа\ШПОРА2020\ORM.csproj\bin\Debug\FluentAssertions.xml
+D:\Работа\ШПОРА2020\ORM.csproj\bin\Debug\System.Runtime.CompilerServices.Unsafe.xml
+D:\Работа\ШПОРА2020\ORM.csproj\bin\Debug\System.Threading.Tasks.Extensions.xml
