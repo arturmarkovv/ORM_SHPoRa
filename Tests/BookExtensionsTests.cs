@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Management.Instrumentation;
 using Extensions;
 using NUnit.Framework;
 using ORM.Contracts;
@@ -13,7 +14,7 @@ namespace ORM.Tests
      2) запрос заполняешь, как 'add id = 1, title = 2; add ..." так точно можно? (хз может я тупень, но проверь это потом)
      3) фигачишь тесты на разные случаи, а потом смотришь, как работает через дебаг и брейкпоинты
      4) пользуйся гитом
-     5) лучше назвать extention "TooStringRequest",
+     5) лучше назвать extention "ToStringRequest",
       а то выглядит как book.BookToString();
      
      "Название теста: Find_MultipleRequestsBySameId_SendsOnlyOneDbQuery
@@ -48,6 +49,22 @@ namespace ORM.Tests
                 Weight = decimal.One
             };
             var bookStr = book.ToStringRequest();
+        }
+
+        [Test]
+        public void ScreeningTest()
+        {
+            var book = new Book
+            {
+                Author = "Robert P, Stiv J",
+                Title = "AC/DC",
+                Id = "123",
+                Skill = "News=sweN;",
+                Price = 1,
+                Weight = decimal.One
+            };
+            var bookStr = book.ToStringRequest();
+            Console.WriteLine(bookStr);
         }
     }
 }

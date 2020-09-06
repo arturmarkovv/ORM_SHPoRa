@@ -1,6 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using Extensions;
+using NUnit.Framework;
+using NUnit.Framework.Constraints;
 using ORM.Contracts;
 using ORM.Db;
 
@@ -66,12 +70,14 @@ namespace ORM
             var result = "";
             foreach (var book in _cashForPaste)
             {
-                var strBook = book.Value.ToStringRequest();
+                var screenedBook = book.Value.ScreenSymbols();
+                var strBook = screenedBook.ToStringRequest();
                 result += "add " + strBook;
             }
             foreach (var book in _cashForUpdate)
             {
-                var strBook = book.Value.ToStringRequest();
+                var screenedBook = book.Value.ScreenSymbols();
+                var strBook = screenedBook.ToStringRequest();
                 result += "upd " + strBook;
             }
             if (_dbEngine.Execute(result).Contains("err"))
@@ -138,6 +144,7 @@ namespace ORM
             }
             return newBook;
         }
+
     }
 }
 
@@ -168,6 +175,55 @@ namespace Extensions
                 result = result.TrimEnd(',');
             }
             return result+";";
+        }
+        
+        public static Book ScreenSymbols(this Book book)
+        {
+            var screenedBook = new Book();
+            foreach (var field in book.GetType().GetProperties())
+            {
+                if (field.GetValue(book)==null) continue;
+                var target =  field.GetValue(book).ToString();
+                var result = target;
+                var delimiters = new string[] {"/", ",", ";", "="};
+                foreach (var delimiter in delimiters)
+                {
+                    if (target.Contains(delimiter))
+                    {
+                        result = result.Replace(delimiter, "/" + delimiter);
+                    }
+                }
+
+                var typeName = field.PropertyType.Name ;
+                switch (typeName)
+                {
+                    case "Int32":
+                        try
+                        {
+                            field.SetValue(screenedBook, int.Parse(result));
+                        }
+                        catch
+                        {
+                            throw new Exception("Invalid int field value");
+                        }
+                        break;
+                    case "Decimal":
+                        try
+                        {
+                            field.SetValue(screenedBook, decimal.Parse(result));
+                        }
+                        catch
+                        {
+                            throw new Exception("Invalid decimal field value");
+                        }
+                        break;
+                    default:
+                            field.SetValue(screenedBook, result);
+                        break;
+                }
+            }
+
+            return screenedBook;
         }
     }
 }
