@@ -9,7 +9,7 @@ namespace ORM
         public static void Main(string[] args)
         {
             var dbEngine = new DbEngine();
-            dbEngine.Execute("add Id=000243DE,Title=The Ransom of Zarek,Price=35,Weight=1,Author=Marobar Sul,Skill=Athletics;");
+            dbEngine.Execute(@"add Id=000243DE,Title=The Ransom\, of \= Zarek,Price=35,Weight=1,Author=Marobar Sul,Skill=Athletics;");
             dbEngine.Execute("add Id=000243EC,Title=The Warp in the West,Price=25,Weight=1,Author=Ulvius Tero,Skill=Block;");
 
             var dataContext = new DataContext(dbEngine);

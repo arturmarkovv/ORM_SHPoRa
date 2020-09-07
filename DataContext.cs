@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
+using System.Text.RegularExpressions;
 using Extensions;
-using NUnit.Framework;
-using NUnit.Framework.Constraints;
 using ORM.Contracts;
 using ORM.Db;
 
@@ -29,7 +26,8 @@ namespace ORM
             {
                 return null;
             }
-            var resBook = ParseStringToBook(resString);
+            //var resBook = ParseStringToBook(resString);
+            var resBook = RegParser(resString);
             _cashForUpdate[id] = resBook;
 
             return _cashForUpdate[id];
@@ -45,8 +43,9 @@ namespace ORM
             {
                 throw new Exception("Doesn't exist");
             }
-
-            var resBook = ParseStringToBook(resString);
+            
+            //var resBook = ParseStringToBook(resString);
+            var resBook = RegParser(resString);
             _cashForUpdate[id] = resBook;
             return _cashForUpdate[id];
             
@@ -92,32 +91,38 @@ namespace ORM
             _cashForPaste.Clear();
         }
 
-        private Book ParseStringToBook(string input)
+        private Book RegParser(string input)
         {
-            var newBook = new Book();
-            input = input.Replace(";", "");
-            var parsedString = input.Split(',');
-            var idAlreadyExist = false;
-            foreach (var field in parsedString)
+            var book = new Book();
+            var regField = new Regex(@"[A-Z]{1}[A-Za-z0-9]*=");
+            var fieldValues = regField.Split(input);
+            var fieldNamesMatches = regField.Matches(input);
+            var fieldDict = new Dictionary<string, string>();
+            for (var i = 0;i<fieldNamesMatches.Count;i++)
             {
-                var subFields = field.Split('=');
-                switch (subFields[0])
+                fieldDict[fieldNamesMatches[i].Value.TrimEnd('=')] = UnScreen(fieldValues[i+1].TrimEnd(',',';'));
+            }
+
+            foreach (var field in fieldDict)
+            {
+                var idAlreadyExist = false;
+                switch (field.Key)
                 {
                     case "Id":
                         if (idAlreadyExist)
                         {
                             throw new Exception();
                         }
-                        newBook.Id = subFields[1];
+                        book.Id = field.Value;
                         idAlreadyExist = true;
                         break;
                     case "Title":
-                        newBook.Title = subFields[1];
+                        book.Title = field.Value;
                         break;
                     case "Price":
                         try
                         {
-                            newBook.Price = int.Parse(subFields[1]);
+                            book.Price = int.Parse(field.Value);
                         }
                         catch
                         {
@@ -127,7 +132,7 @@ namespace ORM
                     case "Weight":
                         try
                         {
-                            newBook.Weight = decimal.Parse(subFields[1]);
+                            book.Weight = decimal.Parse(field.Value);
                         }
                         catch
                         {
@@ -135,16 +140,25 @@ namespace ORM
                         }
                         break;
                     case "Author":
-                        newBook.Author = subFields[1];
+                        book.Author = field.Value;
                         break;
                     case "Skill":
-                        newBook.Skill = subFields[1];
+                        book.Skill = field.Value;
                         break;
                 }
             }
-            return newBook;
+            return book;
         }
 
+        private string UnScreen(string input)
+        {
+			if (input.Contains(@"\"))
+            {
+                return input.Replace(@"\", "");
+            }
+            
+            return input;
+        }
     }
 }
 
@@ -185,12 +199,12 @@ namespace Extensions
                 if (field.GetValue(book)==null) continue;
                 var target =  field.GetValue(book).ToString();
                 var result = target;
-                var delimiters = new string[] {"/", ",", ";", "="};
+                var delimiters = new string[] {"/", ",", ";", "=",@"\"};
                 foreach (var delimiter in delimiters)
                 {
                     if (target.Contains(delimiter))
                     {
-                        result = result.Replace(delimiter, "/" + delimiter);
+                        result = result.Replace(delimiter, @"\" + delimiter);
                     }
                 }
 
