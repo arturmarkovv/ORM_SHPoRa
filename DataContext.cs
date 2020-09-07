@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using Extensions;
 using ORM.Contracts;
@@ -12,6 +14,7 @@ namespace ORM
         private readonly IDbEngine _dbEngine;
         private Dictionary<string, Book> _cashForUpdate = new Dictionary<string, Book>();
         private Dictionary<string, Book> _cashForPaste = new Dictionary<string, Book>();
+        private Dictionary<string, Book> _cashForUpdateDB = new Dictionary<string, Book>();
 
         public DataContext(IDbEngine dbEngine)
         {
@@ -26,8 +29,8 @@ namespace ORM
             {
                 return null;
             }
-            //var resBook = ParseStringToBook(resString);
-            var resBook = RegParser(resString);
+            var resBook = StringToBookParser(resString);
+            _cashForUpdateDB[id] = resBook.Copy();
             _cashForUpdate[id] = resBook;
 
             return _cashForUpdate[id];
@@ -41,14 +44,12 @@ namespace ORM
             var resString = _dbEngine.Execute($"get Id={id};");
             if (resString == ";")
             {
-                throw new Exception("Doesn't exist");
+                throw new Exception("Id doesn't exist");
             }
-            
-            //var resBook = ParseStringToBook(resString);
-            var resBook = RegParser(resString);
+            var resBook = StringToBookParser(resString);
+            _cashForUpdateDB[id] = resBook.Copy();
             _cashForUpdate[id] = resBook;
             return _cashForUpdate[id];
-            
         }
 
         public void Insert(Book entity)
@@ -66,22 +67,26 @@ namespace ORM
 
         public void SubmitChanges()
         {
-            var result = "";
+            var stringRequest = "";
             foreach (var book in _cashForPaste)
             {
                 var screenedBook = book.Value.ScreenSymbols();
                 var strBook = screenedBook.ToStringRequest();
-                result += "add " + strBook;
+                stringRequest += "add " + strBook;
             }
             foreach (var book in _cashForUpdate)
             {
                 var screenedBook = book.Value.ScreenSymbols();
                 var strBook = screenedBook.ToStringRequest();
-                result += "upd " + strBook;
+                
+                if (_cashForUpdate[book.Key] != _cashForUpdateDB[book.Key])
+                {
+                    stringRequest += "upd " + strBook;
+                }
             }
-            if (_dbEngine.Execute(result).Contains("err"))
+            if (_dbEngine.Execute(stringRequest).Contains("err"))
             {
-                throw new Exception(_dbEngine.Execute(result)+" with request "+result);
+                throw new Exception(_dbEngine.Execute(stringRequest)+" with request "+stringRequest);
             }
 
             foreach (var book in _cashForPaste)
@@ -91,30 +96,27 @@ namespace ORM
             _cashForPaste.Clear();
         }
 
-        private Book RegParser(string input)
+        private Book StringToBookParser(string input)
         {
+            input = input.TrimEnd(';');
             var book = new Book();
             var regField = new Regex(@"[A-Z]{1}[A-Za-z0-9]*=");
+            
             var fieldValues = regField.Split(input);
             var fieldNamesMatches = regField.Matches(input);
             var fieldDict = new Dictionary<string, string>();
-            for (var i = 0;i<fieldNamesMatches.Count;i++)
+            
+            for (var i = 0; i < fieldNamesMatches.Count; i++)
             {
-                fieldDict[fieldNamesMatches[i].Value.TrimEnd('=')] = UnScreen(fieldValues[i+1].TrimEnd(',',';'));
+                fieldDict[fieldNamesMatches[i].Value.TrimEnd('=')] = Regex.Unescape(fieldValues[i+1]).TrimEnd(',');
             }
 
             foreach (var field in fieldDict)
             {
-                var idAlreadyExist = false;
                 switch (field.Key)
                 {
                     case "Id":
-                        if (idAlreadyExist)
-                        {
-                            throw new Exception();
-                        }
                         book.Id = field.Value;
-                        idAlreadyExist = true;
                         break;
                     case "Title":
                         book.Title = field.Value;
@@ -149,16 +151,6 @@ namespace ORM
             }
             return book;
         }
-
-        private string UnScreen(string input)
-        {
-			if (input.Contains(@"\"))
-            {
-                return input.Replace(@"\", "");
-            }
-            
-            return input;
-        }
     }
 }
 
@@ -171,15 +163,21 @@ namespace Extensions
         public static string ToStringRequest(this Book book)
         {
             var result = "";
-            foreach (var field in book.GetType().GetProperties())
+            foreach (var propertyInfo in book.GetType().GetProperties())
             {
-                switch (field.Name)
+                switch (propertyInfo.Name)
                 {
                     case "Id":
-                        result = result.Insert(0, field.Name+"="+field.GetValue(book).ToString()+",");
+                        result = result.Insert(0, propertyInfo.Name+"="+propertyInfo.GetValue(book)+",");
                         break;
                     default:
-                        result += field.Name + "=" + field.GetValue(book) + ",";
+                        if (propertyInfo.GetValue(book) != null)
+                        {
+                            if (propertyInfo.GetValue(book).ToString() != "0")
+                            {
+                                result += propertyInfo.Name + "=" + propertyInfo.GetValue(book) + ",";
+                            }
+                        }
                         break;
                 }
             }
@@ -191,30 +189,33 @@ namespace Extensions
             return result+";";
         }
         
-        public static Book ScreenSymbols(this Book book)
+        public static Book ScreenSymbols(this Book inputBook)
         {
             var screenedBook = new Book();
-            foreach (var field in book.GetType().GetProperties())
+            foreach (var property in inputBook.GetType().GetProperties())
             {
-                if (field.GetValue(book)==null) continue;
-                var target =  field.GetValue(book).ToString();
-                var result = target;
-                var delimiters = new string[] {"/", ",", ";", "=",@"\"};
-                foreach (var delimiter in delimiters)
+                if (property.GetValue(inputBook)==null) continue;
+                var value = property.GetValue(inputBook).ToString();
+                var screenedValue = "";
+                foreach (var latter in value)
                 {
-                    if (target.Contains(delimiter))
+                    if (latter == ',' || latter == ';' || latter == '=' || latter == '\\')
                     {
-                        result = result.Replace(delimiter, @"\" + delimiter);
+                        screenedValue += $@"\{latter}";
+                    }
+                    else
+                    {
+                        screenedValue += latter;
                     }
                 }
-
-                var typeName = field.PropertyType.Name ;
+                value = screenedValue;
+                var typeName = property.PropertyType.Name ;
                 switch (typeName)
                 {
                     case "Int32":
                         try
                         {
-                            field.SetValue(screenedBook, int.Parse(result));
+                            property.SetValue(screenedBook, int.Parse(value));
                         }
                         catch
                         {
@@ -224,7 +225,7 @@ namespace Extensions
                     case "Decimal":
                         try
                         {
-                            field.SetValue(screenedBook, decimal.Parse(result));
+                            property.SetValue(screenedBook, decimal.Parse(value));
                         }
                         catch
                         {
@@ -232,12 +233,22 @@ namespace Extensions
                         }
                         break;
                     default:
-                            field.SetValue(screenedBook, result);
+                            property.SetValue(screenedBook, value);
                         break;
                 }
             }
 
             return screenedBook;
+        }
+
+        public static Book Copy(this Book inputBook)
+        {
+            var resBook = new Book();
+            foreach (var propertyInfo in inputBook.GetType().GetProperties())
+            {
+                propertyInfo.SetValue(resBook, propertyInfo.GetValue(inputBook));
+            }
+            return resBook;
         }
     }
 }
